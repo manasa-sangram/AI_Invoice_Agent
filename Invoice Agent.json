@@ -1,0 +1,578 @@
+{
+  "name": "Invoice Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -976,
+        0
+      ],
+      "id": "235c1a3c-dc36-4551-aca0-a91c90cffe9c",
+      "name": "Telegram Trigger",
+      "webhookId": "c17b256d-10aa-4482-a6bb-8ed84243dfe1",
+      "credentials": {
+        "telegramApi": {
+          "id": "l3bSAr9LFpuVkRzO",
+          "name": "Invoice Agent"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.photo[3].file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -704,
+        0
+      ],
+      "id": "3ed77c3f-7c61-4652-a5fd-812fe4db7d3f",
+      "name": "Get a file",
+      "webhookId": "fe2a2ec0-4713-4788-8225-ad6f24a96823",
+      "credentials": {
+        "telegramApi": {
+          "id": "l3bSAr9LFpuVkRzO",
+          "name": "Invoice Agent"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "name": "={{ $now.format('yyyy-MM-dd HH:MM:ss') }}.{{ $('Get a file').item.binary.data.fileExtension }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "https://drive.google.com/drive/u/1/folders/1qNRuZnMDj1bxdehWC1TZn3XXZwG04UmI",
+          "mode": "url"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -464,
+        0
+      ],
+      "id": "6aff8193-cda9-44aa-be69-0cd0458432af",
+      "name": "Upload file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "sFy7W1aLbgJJFg6r",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -192,
+        0
+      ],
+      "id": "d0fe0687-fe99-4005-9988-a069508ab535",
+      "name": "Share file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "sFy7W1aLbgJJFg6r",
+          "name": "Google Drive account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "You are a receipt/invoice extraction engine.\n\nTask: Extract structured data from the provided receipt text/image.\n\nOutput rules:\n• Return ONLY valid JSON (no markdown, no comments).\n• Use null if a field is missing or unreadable. Do not guess.\n• Normalize:\n• date as RFC 3339 if time exists, otherwise YYYY-MM-DD.  ￼\n• currency as ISO 4217 (e.g., EUR, USD).  ￼\n• Amounts as numbers using a dot decimal separator (e.g., 12.34).\n• Consistency checks:\n• total_with_tax should equal total_without_tax + tax_vat (within 0.02). If not, add a warning in notes.\n\nExtract these fields:\n• company_name\n• company_address (Address, Zip City, Country)\n• City (e.g. Berlin, Hamburg, London, New York)\n• receipt_id\n• date\n• payment_method (one of: cash, card, bank_transfer, mobile_wallet, voucher, other, unknown)\n• currency\n• total_with_tax\n• tax\n• total_without_tax\n• category_business (choose the best fit: meals, travel, office_supplies, software, hardware, advertising, utilities, rent, telecom, professional_services, shipping, other)\n• VAT Number\n• notes (array of strings for problems/uncertainty)\n\n\nHints:\n• “Total/Gross” is usually with tax; “Net/Subtotal” is usually without tax. VAT amount may appear as “VAT/MwSt/USt”.  ￼\n• Receipts often contain vendor name/address, receipt number, date, totals, tax, and payment info. \n",
+        "hasOutputParser": true,
+        "messages": {
+          "messageValues": [
+            {
+              "type": "HumanMessagePromptTemplate",
+              "messageType": "imageUrl",
+              "imageUrl": "={{ $('Upload file').item.json.webContentLink }}"
+            }
+          ]
+        },
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        32,
+        0
+      ],
+      "id": "5d79c2f0-f121-4f8c-82a9-fa6b2be6ca05",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -16,
+        256
+      ],
+      "id": "d632a879-b59f-4f7c-98b1-781d2e50cc57",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "kv5lFNS0fRZOocQq",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\n  \"company_name\": \"ACME Coffee GmbH\",\n  \"company_address\": \"Friedrichstr. 12, 10117 Berlin, Germany\",\n  \"receipt_id\": \"R-2025-000834\",\n  \"date\": \"2025-12-14\",\n  \"payment_method\": \"card\",\n  \"currency\": \"EUR\",\n  \"total_with_tax\": 9.50,\n  \"tax\": 0.61,\n  \"total_without_tax\": 8.89,\n  \"vat_number\": \"DE4738473\",\n  \"category_business\": \"meals\",\n  \"city\": \"berlin\",\n  \"notes\": []\n}\n"
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        256,
+        256
+      ],
+      "id": "5d57c483-74e7-4729-a721-164888bd8cc1",
+      "name": "Structured Output Parser"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1k3r_DVtgZ2KOskx6ooBhew1IkYupklOoV4W5RXP6jPg/edit?gid=1762342964#gid=1762342964",
+          "mode": "url"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1762342964,
+          "mode": "list",
+          "cachedResultName": "Invoices",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1k3r_DVtgZ2KOskx6ooBhew1IkYupklOoV4W5RXP6jPg/edit#gid=1762342964"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date": "={{ $now.format('yyyy-MM-dd HH:MM:ss') }}\n",
+            "Receipt Date": "={{ $json.output.date }}",
+            "Company Name": "={{ $json.output.company_name }}",
+            "Total": "={{ $json.output.total_with_tax }}",
+            "Currency": "={{ $json.output.currency }}",
+            "Tax": "={{ $json.output.tax }}",
+            "Payment Method": "={{ $json.output.payment_method }}",
+            "Invoice ID": "={{ $json.output.receipt_id }}",
+            "Company Address": "={{ $json.output.company_address }}",
+            "Category": "={{ $json.output.category_business }}",
+            "Receipt Link": "={{ $('Upload file').item.json.webViewLink }}",
+            "Month": "={{ $now.format('yyyy-MM')}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt Date",
+              "displayName": "Receipt Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Name",
+              "displayName": "Company Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total",
+              "displayName": "Total",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Currency",
+              "displayName": "Currency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tax",
+              "displayName": "Tax",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Payment Method",
+              "displayName": "Payment Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Invoice ID",
+              "displayName": "Invoice ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Company Address",
+              "displayName": "Company Address",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Receipt Link",
+              "displayName": "Receipt Link",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Month",
+              "displayName": "Month",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "City",
+              "displayName": "City",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Address Detail",
+              "displayName": "Address Detail",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "FX Rate (EUR)",
+              "displayName": "FX Rate (EUR)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Total (EUR)",
+              "displayName": "Total (EUR)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tax (EUR)",
+              "displayName": "Tax (EUR)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Net (EUR)",
+              "displayName": "Net (EUR)",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        0
+      ],
+      "id": "5aab471c-bc90-45ca-b8cc-6962ea09ced8",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "xjgfDuoZtbbeqX98",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "=Invoice Successfully Added Wohoo!!{{ $json['Company Name'] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        656,
+        0
+      ],
+      "id": "56b1d341-7cf6-49d7-b78a-16598e050e8f",
+      "name": "Send a text message",
+      "webhookId": "4405cd46-5a7e-4d6c-bd65-5c24487648a4",
+      "credentials": {
+        "telegramApi": {
+          "id": "l3bSAr9LFpuVkRzO",
+          "name": "Invoice Agent"
+        }
+      }
+    }
+  ],
+  "pinData": {
+    "Telegram Trigger": [
+      {
+        "json": {
+          "update_id": 636418827,
+          "message": {
+            "message_id": 4,
+            "from": {
+              "id": 1450192281,
+              "is_bot": false,
+              "first_name": "Manasa",
+              "last_name": "Sangram",
+              "username": "manasa_sangram",
+              "language_code": "en"
+            },
+            "chat": {
+              "id": 1450192281,
+              "first_name": "Manasa",
+              "last_name": "Sangram",
+              "username": "manasa_sangram",
+              "type": "private"
+            },
+            "date": 1780771861,
+            "photo": [
+              {
+                "file_id": "AgACAgUAAxkBAAMEaiRsFanEqPY9wym8aoTxXkWSt8YAAlgYaxu1syBVMOaz0GIxgvEBAAMCAANzAAM7BA",
+                "file_unique_id": "AQADWBhrG7WzIFV4",
+                "file_size": 1111,
+                "width": 51,
+                "height": 90
+              },
+              {
+                "file_id": "AgACAgUAAxkBAAMEaiRsFanEqPY9wym8aoTxXkWSt8YAAlgYaxu1syBVMOaz0GIxgvEBAAMCAANtAAM7BA",
+                "file_unique_id": "AQADWBhrG7WzIFVy",
+                "file_size": 15979,
+                "width": 180,
+                "height": 320
+              },
+              {
+                "file_id": "AgACAgUAAxkBAAMEaiRsFanEqPY9wym8aoTxXkWSt8YAAlgYaxu1syBVMOaz0GIxgvEBAAMCAAN4AAM7BA",
+                "file_unique_id": "AQADWBhrG7WzIFV9",
+                "file_size": 73235,
+                "width": 450,
+                "height": 800
+              },
+              {
+                "file_id": "AgACAgUAAxkBAAMEaiRsFanEqPY9wym8aoTxXkWSt8YAAlgYaxu1syBVMOaz0GIxgvEBAAMCAAN5AAM7BA",
+                "file_unique_id": "AQADWBhrG7WzIFV-",
+                "file_size": 139232,
+                "width": 720,
+                "height": 1280
+              }
+            ]
+          }
+        },
+        "pairedItem": {
+          "item": 0
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Upload file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload file": {
+      "main": [
+        [
+          {
+            "node": "Share file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Share file": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "a6249a34-e96f-4c1d-8d13-74ee83806f5b",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "cd2ec01dc770a95783b89984f988f89581c5258929bf3bfb65bf31031d0088b0"
+  },
+  "nodeGroups": [],
+  "id": "zI17QR1ZTlw3QioT",
+  "tags": []
+}
